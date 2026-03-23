@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { getUser, logout } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import {supabase } from "@/lib/supabase";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -15,6 +23,12 @@ export default function Dashboard() {
   const [coins, setCoins] = useState([]);
   const [search, setSearch] = useState("");
   const [selectedCoin, setSelectedCoin] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [portfolioValue, setPortfolioValue] = useState(0);
+  const [totalInvestment, setTotalInvestment] = useState(0);
+  const [profitLoss, setProfitLoss] = useState(0);
+  const [profitPercent, setProfitPercent] = useState(0);
+  const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
     async function fetchWallet(userId) {
@@ -129,6 +143,18 @@ export default function Dashboard() {
     if (!error) {
       setWallet(data);
     }
+
+    await supabase.from("transactions").insert([
+      {
+        user_id: user.id,
+        type: "buy",
+        coin: coinKey,
+        amount: cryptoAmount,
+        price: price,
+        ngn_value: ngnAmount
+      }
+    ]);
+
   }
 
   async function handleSell() {
@@ -163,7 +189,107 @@ export default function Dashboard() {
     if (!error) {
       setWallet(data);
     }
+
+    await supabase.from("transactions").insert([
+      {
+        user_id: user.id,
+        type: "sell",
+        coin: coinKey,
+        amount: cryptoAmount,
+        price: price,
+        ngn_value: ngnValue
+      }
+    ]);
+
   }
+
+  useEffect(() => {
+    async function fetchTransactions() {
+      const { data } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      setTransactions(data);
+    }
+
+    if (user) fetchTransactions();
+  }, [user]);
+
+  useEffect(() => {
+    if (!wallet?.balance || coins.length === 0) return;
+
+    let total = 0;
+
+    Object.entries(wallet.balance).forEach(([coin, amount]) => {
+      if (coin === "ngn") {
+        total += Number(amount);
+      } else {
+        const coinData = coins.find(
+          (c) => c.symbol.toLowerCase() === coin
+        );
+
+        if (coinData) {
+          total += Number(amount) * coinData.current_price * 1600;
+        }
+      }
+    });
+
+    setPortfolioValue(total);
+    }, [wallet, coins]);
+
+    useEffect(() => {
+    if (!transactions.length) return;
+
+    let total = 0;
+
+    transactions.forEach((tx) => {
+      if (tx.type === "buy") {
+        total += Number(tx.ngn_value);
+      } else if (tx.type === "sell") {
+        total -= Number(tx.ngn_value);
+      }
+    });
+
+    setTotalInvestment(total);
+  }, [transactions]);
+
+  useEffect(() => {
+    if (!portfolioValue) return;
+
+    const profit = portfolioValue - totalInvestment;
+    const percent = totalInvestment
+      ? (profit / totalInvestment) * 100
+      : 0;
+
+    setProfitLoss(profit);
+    setProfitPercent(percent);
+  }, [portfolioValue, totalInvestment]);
+
+  useEffect(() => {
+    if (!transactions.length) return;
+
+    let runningTotal = 0;
+
+    const data = transactions
+      .slice()
+      .reverse()
+      .map((tx) => {
+        if (tx.type === "buy") {
+          runningTotal += Number(tx.ngn_value);
+        } else {
+          runningTotal -= Number(tx.ngn_value);
+        }
+
+        return {
+          date: new Date(tx.created_at).toLocaleDateString(),
+          value: runningTotal,
+        };
+      });
+
+    setChartData(data);
+  }, [transactions]);
 
   async function handleLogout() {
     await logout();
@@ -199,8 +325,94 @@ export default function Dashboard() {
         <p className="text-gray-600">Email: {user.email}</p>
       </div>
 
+      {/* PORTFOLIO VALUE */}
+      <div className="w-full bg-gradient-to-r from-blue-900 to-blue-700 text-white py-10 px-6 mb-6 rounded-xl">
+        <h1 className="text-center font-bold text-5xl mb-6 text-yellow-400">My Portfolio</h1>
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
+
+          {/* LEFT */}
+          <div>
+            <h2 className="text-lg text-gray-200">Total Portfolio Value</h2>
+
+            <p className="text-4xl md:text-5xl font-bold mt-2">
+              ₦{portfolioValue.toLocaleString()}
+            </p>
+
+            <p className="text-sm text-gray-300 mt-1">
+              ≈ ${Math.round(portfolioValue / 1600).toLocaleString()}
+            </p>
+          </div>
+
+          {/* RIGHT - PROFIT/LOSS */}
+          <div className="mt-6 md:mt-0 text-center  md:text-right">
+
+            <p className="text-lg text-gray-200">Profit / Loss</p>
+
+            <p
+              className={`text-2xl font-semibold ${
+                profitLoss >= 0 ? "text-green-400" : "text-red-400"
+              }`}
+            >
+              {profitLoss >= 0 ? "+" : "-"}₦
+              {Math.abs(profitLoss).toLocaleString()}
+            </p>
+
+            <p
+              className={`text-sm ${
+                profitPercent >= 0 ? "text-green-300" : "text-red-300"
+              }`}
+            >
+              {profitPercent.toFixed(2)}%
+            </p>
+            <p className="text-xs text-gray-300 mt-2">
+              Initial Investment: ₦{totalInvestment.toLocaleString()}
+            </p>
+
+          </div>
+          
+          <div className="mt-6 md:mt-0 text-center md:text-right">
+            <p className="text-lg text-gray-200">Assets</p>
+            <p className="text-2xl font-semibold">
+              {wallet?.balance ? Object.keys(wallet.balance).length : 0}
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-xl shadow mb-6">
+        <h2 className="text-lg font-semibold mb-4">
+          Portfolio Growth
+        </h2>
+
+        {chartData.length === 0 ? (
+          <p className="text-gray-400 text-center">
+            No data yet
+          </p>
+        ) : (
+          <div className="w-full h-64">
+            <ResponsiveContainer>
+              <LineChart data={chartData}>
+                <XAxis dataKey="date" />
+                <YAxis tickFormatter={(value) => `₦${value}`} />
+                <Tooltip />
+
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
       {/* MAIN GRID */}
       <div className="grid md:grid-cols-3 gap-6">
+
 
         {/* WALLET */}
         <div className="bg-white p-6 rounded-xl shadow">
@@ -320,6 +532,43 @@ export default function Dashboard() {
           >
             Sell
           </button>
+        </div>
+
+        {/* TRANSACTION HISTORY */}
+        <div className="bg-white p-6 rounded-xl shadow mt-6">
+          <h2 className="text-lg font-semibold mb-4">Transaction History</h2>
+
+          {transactions.length === 0 ? (
+            <p className="text-gray-400 text-center">No transactions yet</p>
+          ) : (
+            <div className="space-y-3">
+              {transactions.map((tx) => (
+                <div
+                  key={tx.id}
+                  className="flex justify-between items-center p-3 bg-gray-100 rounded"
+                >
+                  <div>
+                    <p className="font-semibold">
+                      {tx.type.toUpperCase()} {tx.coin.toUpperCase()}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(tx.created_at).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <p>
+                      {tx.type === "buy" ? "+" : "-"}
+                      {tx.amount}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      ₦{Number(tx.ngn_value).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>
