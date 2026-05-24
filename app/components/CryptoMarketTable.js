@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Sparklines, SparklinesLine } from "react-sparklines";
+import Image from "next/image";
 
 export default function CryptoMarketTable() {
 
@@ -58,10 +59,11 @@ export default function CryptoMarketTable() {
               >
                 <td className="flex items-center gap-3 py-4">
 
-                  <img
+                  <Image
                     src={coin.image}
                     alt={coin.name}
-                    className="w-8 h-8"
+                    width={32}
+                    height={32}
                   />
 
                   <span className="font-semibold">

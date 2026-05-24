@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function TrendingCoins() {
   const [trending, setTrending] = useState([]);
@@ -24,11 +25,7 @@ export default function TrendingCoins() {
             key={coin.item.id}
             className="bg-gray-800 rounded-xl p-4 flex items-center gap-3 hover:bg-gray-700 transition"
           >
-            <img
-              src={coin.item.small}
-              alt={coin.item.name}
-              className="w-8 h-8"
-            />
+            <Image src={coin.item.small} alt={coin.item.name} width={32} height={32} />
 
             <div>
               <p className="font-semibold">

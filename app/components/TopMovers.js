@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function TopMovers() {
   const [coins, setCoins] = useState([]);
@@ -42,7 +43,7 @@ export default function TopMovers() {
               className="flex items-center justify-between bg-gray-900 p-3 rounded-lg mb-3"
             >
               <div className="flex items-center gap-3">
-                <img src={coin.image} className="w-7 h-7" />
+                <Image src={coin.image} alt={coin.name} width={28} height={28} />
                 <span>{coin.symbol.toUpperCase()}</span>
               </div>
 
@@ -65,7 +66,7 @@ export default function TopMovers() {
               className="flex items-center justify-between bg-gray-900 p-3 rounded-lg mb-3"
             >
               <div className="flex items-center gap-3">
-                <img src={coin.image} className="w-7 h-7" />
+                <Image src={coin.image} alt={coin.name} width={28} height={28} />
                 <span>{coin.symbol.toUpperCase()}</span>
               </div>
 

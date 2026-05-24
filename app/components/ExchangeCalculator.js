@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { FaExchangeAlt } from "react-icons/fa"
+import Image from "next/image"
 
 export default function ExchangeCalculator({ close }) {
 
@@ -110,7 +111,7 @@ export default function ExchangeCalculator({ close }) {
               className="p-2 hover:bg-gray-100 cursor-pointer flex items-center justify-between"
             >
               <div className="flex items-center gap-2">
-                <img src={coin.image} alt={coin.name} className="w-5 h-5" />
+                <Image src={coin.image} alt={coin.name} width={20} height={20} />
                 <span>
                   {coin.name} ({coin.symbol.toUpperCase()})
                 </span>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Sparklines, SparklinesLine } from "react-sparklines";
+import Image from "next/image";
 
 export default function PriceTicker() {
 
@@ -30,10 +31,11 @@ export default function PriceTicker() {
         {[...coins, ...coins].map((coin, index) => (
           <div key={coin.id + "-" + index} className="flex items-center gap-3">
 
-            <img
+            <Image
               src={coin.image}
               alt={coin.name}
-              className="w-10 h-10"
+              width={24}
+              height={24}
             />
 
             <span className="font-semibold">

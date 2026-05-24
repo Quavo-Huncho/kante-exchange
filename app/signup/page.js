@@ -3,75 +3,116 @@
 import { useState } from "react";
 import { signUp } from "@/lib/auth";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   async function handleSignup() {
+    setLoading(true);
     const { error } = await signUp(email, password);
 
     if (error) {
       alert(error.message);
     } else {
-      alert("Signup successful! Check your email.");
+      router.push("/login");
     }
+    setLoading(false);
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center">
-      <h1 className="text-2xl mb-6">Signup</h1>
+    <div className="min-h-screen flex">
 
-      <div className="space-y-4 w-[350px]">
+      {/* LEFT SIDE (Branding) */}
+      <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-blue-900 to-black text-white p-10">
+        <h1 className="text-4xl font-bold mb-4">
+          Your Finance, Simplified
+        </h1>
+        <p className="text-gray-300 text-center max-w-sm">
+          Securely manage your money, track assets, and make smarter financial decisions—all in one place.
+        </p>
+      </div>
 
-        {/* Email */}
-        <div className="flex items-center gap-0">
-          <label className="w-24 text-sm font-medium text-gray-700">
-            Email
-          </label>
+      {/* RIGHT SIDE (Form) */}
+      <div className="flex items-center justify-center w-full md:w-1/2 bg-gray-100">
+        
+        <div className="bg-white w-[380px] p-8 rounded-2xl shadow-lg">
 
-          <input
-            type="email"
-            placeholder="Email"
-            className="border p-2 flex-1 rounded"
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
+          {/* Title */}
+          <h2 className="text-2xl font-semibold mb-2">
+            Create Account
+          </h2>
+          <p className="text-gray-500 mb-6 text-sm">
+            Start your journey with us
+          </p>
 
-        {/* Password */}
-        <div className="flex items-center gap-0">
-          <label className="w-24 text-sm font-medium text-gray-700">
-            Password
-          </label>
+          {/* Email */}
+          <div className="mb-4">
+            <label className="block text-sm mb-1 text-gray-600">
+              Email Address
+            </label>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-800"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
 
-          <div className="relative flex-1">
+          {/* Password */}
+          <div className="mb-4 relative">
+            <label className="block text-sm mb-1 text-gray-600">
+              Password
+            </label>
+
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              className="border p-2 w-full rounded"
+              placeholder="Minimum 6 characters"
+              className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-800"
+              value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
 
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-2 cursor-pointer"
+              className="absolute right-3 top-10 text-gray-500"
             >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </button>
           </div>
+
+          {/* Button */}
+          <button
+            onClick={handleSignup}
+            disabled={loading}
+            className="w-full bg-blue-900 text-white py-3 rounded-lg hover:bg-black transition font-medium disabled:bg-gray-400"
+          >
+            {loading ? "Creating Account..." : "Create Account"}
+          </button>
+
+          {/* Divider */}
+          <div className="flex items-center my-5">
+            <div className="flex-1 h-px bg-gray-300"></div>
+            <span className="px-3 text-gray-400 text-sm">OR</span>
+            <div className="flex-1 h-px bg-gray-300"></div>
+          </div>
+
+          {/* Login Link */}
+          <p className="text-center text-sm text-gray-500">
+            Already have an account?{" "}
+            <Link href="/login" className="text-blue-800 font-medium hover:underline">
+              Sign in
+            </Link>
+          </p>
+
         </div>
-
-        {/* Button */}
-        <button
-          onClick={handleSignup}
-          className="bg-blue-900 text-white w-full py-2 rounded mt-4"
-        >
-          Signup
-        </button>
-
       </div>
     </div>
   );

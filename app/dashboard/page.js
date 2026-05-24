@@ -1,93 +1,79 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getUser, logout } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import {supabase } from "@/lib/supabase";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { supabase } from "@/lib/supabase";
+
+// components
+import PortfolioCard from "../components/PortfolioCard";
+import DepositCard from "../components/DepositCard";
+import CoinSelector from "../components/CoinSelector";
+import TradeCard from "../components/TradeCard";
+import Transactions from "../components/Transactions";
 
 export default function Dashboard() {
-  const [user, setUser] = useState(null);
   const router = useRouter();
+
+  const [user, setUser] = useState(null);
   const [wallet, setWallet] = useState(null);
+  const [coins, setCoins] = useState([]);
+  const [selectedCoin, setSelectedCoin] = useState(null);
+  const [search, setSearch] = useState("");
   const [buyAmount, setBuyAmount] = useState("");
   const [sellAmount, setSellAmount] = useState("");
-  const [btcPrice, setBtcPrice] = useState(0);
-  const [coins, setCoins] = useState([]);
-  const [search, setSearch] = useState("");
-  const [selectedCoin, setSelectedCoin] = useState(null);
+  const [depositAmount, setDepositAmount] = useState("");
   const [transactions, setTransactions] = useState([]);
-  const [portfolioValue, setPortfolioValue] = useState(0);
-  const [totalInvestment, setTotalInvestment] = useState(0);
-  const [profitLoss, setProfitLoss] = useState(0);
-  const [profitPercent, setProfitPercent] = useState(0);
-  const [chartData, setChartData] = useState([]);
+  const [showTransactions, setShowTransactions] = useState(false);
+  const RATE = 1600;
 
+  // ================= INIT =================
   useEffect(() => {
-    async function fetchWallet(userId) {
-      // try to get wallet
-      let { data, error } = await supabase
+    async function init() {
+      const currentUser = await getUser();
+      if (!currentUser) return router.push("/login");
+
+      setUser(currentUser);
+
+      let { data } = await supabase
         .from("wallets")
         .select("*")
-        .eq("user_id", userId)
-        .maybeSingle(); // ✅ FIXED (no crash)
+        .eq("user_id", currentUser.id)
+        .maybeSingle();
 
-      console.log("Wallet fetch:", data, error);
-
-      // 🚀 If wallet doesn't exist → create one
       if (!data) {
-        const { data: newWallet, error: insertError } = await supabase
+        const { data: newWallet } = await supabase
           .from("wallets")
-          .insert([
-            {
-              user_id: userId,
-              btc: 0,
-              eth: 0,
-              usdt: 0,
-              ngn: 0,
-            },
-          ])
+          .insert([{ user_id: currentUser.id, balance: {} }])
           .select()
           .single();
-
-        console.log("Created wallet:", newWallet, insertError);
 
         setWallet(newWallet);
       } else {
         setWallet(data);
       }
+
+      const { data: txs } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .order("created_at", { ascending: false });
+
+      setTransactions(txs || []);
     }
 
-    async function checkUser() {
-      const currentUser = await getUser();
+    init();
+  }, [router]);
 
-      if (!currentUser) {
-        router.push("/login"); // 🔒 redirect if not logged in
-      } else {
-        setUser(currentUser);
-        fetchWallet(currentUser.id);
-      }
-    }
-
-    checkUser();
-  }, []);
-
+  // ================= COINS =================
   useEffect(() => {
     async function fetchCoins() {
       const res = await fetch(
-        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&per_page=50&page=1"
+        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd"
       );
       const data = await res.json();
       setCoins(data);
     }
-
     fetchCoins();
   }, []);
 
@@ -95,481 +81,294 @@ export default function Dashboard() {
     coin.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  useEffect(() => {
-    async function fetchBTCPrice() {
-      const res = await fetch(
-        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
-      );
-      const data = await res.json();
-
-      setBtcPrice(data.bitcoin.usd);
-    }
-
-    fetchBTCPrice();
-
-    const interval = setInterval(fetchBTCPrice, 15000); // update every 15s
-    return () => clearInterval(interval);
-  }, []);
-
-  async function handleBuy() {
-    if (!selectedCoin || !buyAmount) return;
-
-    const ngnAmount = Number(buyAmount);
-    const price = selectedCoin.current_price;
-    const coinKey = selectedCoin.symbol.toLowerCase();
-
-    const cryptoAmount = ngnAmount / (price * 1600);
-
-    const currentBalance = wallet.balance || {};
-
-    if ((currentBalance.ngn || 0) < ngnAmount) {
-      alert("Insufficient NGN");
-      return;
-    }
-
-    const updatedBalance = {
-      ...currentBalance,
-      ngn: (currentBalance.ngn || 0) - ngnAmount,
-      [coinKey]: (currentBalance[coinKey] || 0) + cryptoAmount
-    };
-
-    const { data, error } = await supabase
-      .from("wallets")
-      .update({ balance: updatedBalance })
-      .eq("user_id", user.id)
-      .select()
-      .single();
-
-    if (!error) {
-      setWallet(data);
-    }
-
-    await supabase.from("transactions").insert([
-      {
-        user_id: user.id,
-        type: "buy",
-        coin: coinKey,
-        amount: cryptoAmount,
-        price: price,
-        ngn_value: ngnAmount
-      }
-    ]);
-
-  }
-
-  async function handleSell() {
-    if (!selectedCoin || !sellAmount) return;
-
-    const cryptoAmount = Number(sellAmount);
-    const price = selectedCoin.current_price;
-    const coinKey = selectedCoin.symbol.toLowerCase();
-
-    const currentBalance = wallet.balance || {};
-
-    if ((currentBalance[coinKey] || 0) < cryptoAmount) {
-      alert("Insufficient balance");
-      return;
-    }
-
-    const ngnValue = cryptoAmount * price * 1600;
-
-    const updatedBalance = {
-      ...currentBalance,
-      ngn: (currentBalance.ngn || 0) + ngnValue,
-      [coinKey]: (currentBalance[coinKey] || 0) - cryptoAmount
-    };
-
-    const { data, error } = await supabase
-      .from("wallets")
-      .update({ balance: updatedBalance })
-      .eq("user_id", user.id)
-      .select()
-      .single();
-
-    if (!error) {
-      setWallet(data);
-    }
-
-    await supabase.from("transactions").insert([
-      {
-        user_id: user.id,
-        type: "sell",
-        coin: coinKey,
-        amount: cryptoAmount,
-        price: price,
-        ngn_value: ngnValue
-      }
-    ]);
-
-  }
-
-  useEffect(() => {
-    async function fetchTransactions() {
-      const { data } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      setTransactions(data);
-    }
-
-    if (user) fetchTransactions();
-  }, [user]);
-
-  useEffect(() => {
-    if (!wallet?.balance || coins.length === 0) return;
+  // ================= PORTFOLIO =================
+  const portfolioValue = useMemo(() => {
+    if (!wallet?.balance || coins.length === 0) return 0;
 
     let total = 0;
 
     Object.entries(wallet.balance).forEach(([coin, amount]) => {
-      if (coin === "ngn") {
-        total += Number(amount);
-      } else {
+      if (coin === "ngn") total += Number(amount);
+      else {
         const coinData = coins.find(
           (c) => c.symbol.toLowerCase() === coin
         );
-
         if (coinData) {
-          total += Number(amount) * coinData.current_price * 1600;
+          total += Number(amount) * coinData.current_price * RATE;
         }
       }
     });
 
-    setPortfolioValue(total);
-    }, [wallet, coins]);
+    return total;
+  }, [wallet, coins, RATE]);
 
-    useEffect(() => {
-    if (!transactions.length) return;
+  // ================= DEPOSIT =================
+  async function handleDeposit() {
+    if (!depositAmount || !wallet) return;
 
-    let total = 0;
+    const amount = Number(depositAmount);
 
-    transactions.forEach((tx) => {
-      if (tx.type === "buy") {
-        total += Number(tx.ngn_value);
-      } else if (tx.type === "sell") {
-        total -= Number(tx.ngn_value);
-      }
-    });
+    const newBalance = {
+      ...(wallet.balance || {}),
+      ngn: (wallet.balance?.ngn || 0) + amount,
+    };
 
-    setTotalInvestment(total);
-  }, [transactions]);
+    await supabase
+      .from("wallets")
+      .update({ balance: newBalance })
+      .eq("user_id", user.id);
 
-  useEffect(() => {
-    if (!portfolioValue) return;
+    setWallet((prev) => ({ ...prev, balance: newBalance }));
 
-    const profit = portfolioValue - totalInvestment;
-    const percent = totalInvestment
-      ? (profit / totalInvestment) * 100
-      : 0;
+    const { data: tx } = await supabase
+      .from("transactions")
+      .insert([
+        {
+          user_id: user.id,
+          type: "deposit",
+          coin: "ngn",
+          amount,
+          price: 1,
+          ngn_value: amount,
+        },
+      ])
+      .select()
+      .single();
 
-    setProfitLoss(profit);
-    setProfitPercent(percent);
-  }, [portfolioValue, totalInvestment]);
+    setTransactions((prev) => [tx, ...prev]);
+    setDepositAmount("");
+  }
 
-  useEffect(() => {
-    if (!transactions.length) return;
+  // ================= BUY =================
+  async function handleBuy() {
+    if (!selectedCoin || !buyAmount || !wallet) return;
 
-    let runningTotal = 0;
+    const ngnAmount = Number(buyAmount);
+    const coinKey = selectedCoin.symbol.toLowerCase();
+    const price = selectedCoin.current_price;
 
-    const data = transactions
-      .slice()
-      .reverse()
-      .map((tx) => {
-        if (tx.type === "buy") {
-          runningTotal += Number(tx.ngn_value);
-        } else {
-          runningTotal -= Number(tx.ngn_value);
-        }
+    const cryptoAmount = ngnAmount / (price * RATE);
+    const currentBalance = wallet.balance || {};
 
-        return {
-          date: new Date(tx.created_at).toLocaleDateString(),
-          value: runningTotal,
-        };
-      });
+    if ((currentBalance.ngn || 0) < ngnAmount) {
+      return alert("Insufficient NGN");
+    }
 
-    setChartData(data);
-  }, [transactions]);
+    const updatedBalance = {
+      ...currentBalance,
+      ngn: currentBalance.ngn - ngnAmount,
+      [coinKey]: (currentBalance[coinKey] || 0) + cryptoAmount,
+    };
+
+    await supabase
+      .from("wallets")
+      .update({ balance: updatedBalance })
+      .eq("user_id", user.id);
+
+    setWallet((prev) => ({ ...prev, balance: updatedBalance }));
+
+    const { data: tx } = await supabase
+      .from("transactions")
+      .insert([
+        {
+          user_id: user.id,
+          type: "buy",
+          coin: coinKey,
+          amount: cryptoAmount,
+          price,
+          ngn_value: ngnAmount,
+        },
+      ])
+      .select()
+      .single();
+
+    setTransactions((prev) => [tx, ...prev]);
+    setBuyAmount("");
+  }
+
+  // ================= SELL =================
+  async function handleSell() {
+    if (!selectedCoin || !sellAmount || !wallet) return;
+
+    const cryptoAmount = Number(sellAmount);
+    const coinKey = selectedCoin.symbol.toLowerCase();
+    const price = selectedCoin.current_price;
+
+    const currentBalance = wallet.balance || {};
+    const available = currentBalance[coinKey] || 0;
+
+    if (available < cryptoAmount) {
+      return alert("Insufficient balance");
+    }
+
+    const ngnValue = cryptoAmount * price * RATE;
+
+    const updatedBalance = {
+      ...currentBalance,
+      ngn: (currentBalance.ngn || 0) + ngnValue,
+      [coinKey]: available - cryptoAmount,
+    };
+
+    await supabase
+      .from("wallets")
+      .update({ balance: updatedBalance })
+      .eq("user_id", user.id);
+
+    setWallet((prev) => ({ ...prev, balance: updatedBalance }));
+
+    const { data: tx } = await supabase
+      .from("transactions")
+      .insert([
+        {
+          user_id: user.id,
+          type: "sell",
+          coin: coinKey,
+          amount: cryptoAmount,
+          price,
+          ngn_value: ngnValue,
+        },
+      ])
+      .select()
+      .single();
+
+    setTransactions((prev) => [tx, ...prev]);
+    setSellAmount("");
+  }
 
   async function handleLogout() {
     await logout();
     router.push("/login");
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
+  if (!user) return <div className="p-10">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="p-6 bg-gray-100 min-h-screen">
 
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+      {/* TOP HEADER */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-gray-500 text-sm">
+            Welcome back, {user?.email}
+          </p>
+        </div>
 
         <button
           onClick={handleLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition cursor-pointer"
+          className="bg-red-500 text-white px-4 py-2 rounded-lg mt-3 md:mt-0"
         >
           Logout
         </button>
       </div>
 
-      {/* User Card */}
-      <div className="bg-white p-6 rounded-xl shadow mb-6">
-        <h2 className="text-lg font-semibold mb-2">Welcome 👋</h2>
-        <p className="text-gray-600">Email: {user.email}</p>
+      {/* MARKET STATUS STRIP */}
+      <div className="bg-black text-white p-3 rounded-xl mb-6 flex items-center justify-between text-sm">
+        <span>📊 Live Market: Active</span>
+        <span className="text-green-400">● Connected</span>
       </div>
 
-      {/* PORTFOLIO VALUE */}
-      <div className="w-full bg-gradient-to-r from-blue-900 to-blue-700 text-white py-10 px-6 mb-6 rounded-xl">
-        <h1 className="text-center font-bold text-5xl mb-6 text-yellow-400">My Portfolio</h1>
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
-
-          {/* LEFT */}
-          <div>
-            <h2 className="text-lg text-gray-200">Total Portfolio Value</h2>
-
-            <p className="text-4xl md:text-5xl font-bold mt-2">
-              ₦{portfolioValue.toLocaleString()}
-            </p>
-
-            <p className="text-sm text-gray-300 mt-1">
-              ≈ ${Math.round(portfolioValue / 1600).toLocaleString()}
-            </p>
-          </div>
-
-          {/* RIGHT - PROFIT/LOSS */}
-          <div className="mt-6 md:mt-0 text-center  md:text-right">
-
-            <p className="text-lg text-gray-200">Profit / Loss</p>
-
-            <p
-              className={`text-2xl font-semibold ${
-                profitLoss >= 0 ? "text-green-400" : "text-red-400"
-              }`}
-            >
-              {profitLoss >= 0 ? "+" : "-"}₦
-              {Math.abs(profitLoss).toLocaleString()}
-            </p>
-
-            <p
-              className={`text-sm ${
-                profitPercent >= 0 ? "text-green-300" : "text-red-300"
-              }`}
-            >
-              {profitPercent.toFixed(2)}%
-            </p>
-            <p className="text-xs text-gray-300 mt-2">
-              Initial Investment: ₦{totalInvestment.toLocaleString()}
-            </p>
-
-          </div>
-          
-          <div className="mt-6 md:mt-0 text-center md:text-right">
-            <p className="text-lg text-gray-200">Assets</p>
-            <p className="text-2xl font-semibold">
-              {wallet?.balance ? Object.keys(wallet.balance).length : 0}
-            </p>
-          </div>
-
-        </div>
-      </div>
-
-      <div className="bg-white p-6 rounded-xl shadow mb-6">
-        <h2 className="text-lg font-semibold mb-4">
-          Portfolio Growth
+      {/* PORTFOLIO HERO CARD */}
+      <div className="bg-gradient-to-r from-blue-900 to-black text-white p-6 rounded-2xl shadow mb-6">
+        <p className="text-sm text-gray-300">Total Portfolio Value</p>
+        <h2 className="text-3xl font-bold mt-2">
+          ₦{portfolioValue.toLocaleString()}
         </h2>
 
-        {chartData.length === 0 ? (
-          <p className="text-gray-400 text-center">
-            No data yet
-          </p>
-        ) : (
-          <div className="w-full h-64">
-            <ResponsiveContainer>
-              <LineChart data={chartData}>
-                <XAxis dataKey="date" />
-                <YAxis tickFormatter={(value) => `₦${value}`} />
-                <Tooltip />
+        <p className="text-xs text-gray-400 mt-2">
+          Real-time valuation based on market prices
+        </p>
+      </div>
 
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#2563eb"
-                  strokeWidth={3}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+      {/* QUICK STATS */}
+      <div className="grid md:grid-cols-3 gap-4 mb-6">
+
+        <div className="bg-white p-5 rounded-xl shadow">
+          <p className="text-gray-500 text-sm">NGN Balance</p>
+          <h3 className="text-xl font-bold">
+            ₦{wallet?.balance?.ngn?.toLocaleString() || 0}
+          </h3>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl shadow">
+          <p className="text-gray-500 text-sm">Assets Held</p>
+          <h3 className="text-xl font-bold">
+            {Object.keys(wallet?.balance || {}).length - 1 || 0}
+          </h3>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl shadow">
+          <p className="text-gray-500 text-sm">Transactions</p>
+          <h3 className="text-xl font-bold">
+            {transactions.length}
+          </h3>
+        </div>
+
       </div>
 
       {/* MAIN GRID */}
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-2 gap-6 mb-6">
 
+        {/* LEFT COLUMN */}
+        <div className="space-y-6">
 
-        {/* WALLET */}
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h2 className="text-lg font-semibold mb-4">Your Wallet</h2>
-
-          <div className="grid grid-cols-2 gap-4">
-            {wallet?.balance && Object.keys(wallet.balance).length > 0 ? (
-              <div className="grid grid-cols-2 gap-4">
-                {Object.entries(wallet.balance).map(([coin, value]) => (
-                  <div key={coin} className="p-3 bg-gray-100 rounded text-center">
-                    <p className="text-sm text-gray-500">{coin.toUpperCase()}</p>
-                    <p className="font-semibold">
-                      {coin === "ngn" ? "₦" : ""}
-                      {Number(value).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-400 text-center">No assets yet</p>
-            )}
-          </div>
-        </div>
-
-        {/* COIN SELECTOR */}
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h2 className="text-lg font-semibold mb-4">Select Coin</h2>
-
-          <input
-            type="text"
-            placeholder="Search coin..."
-            className="border p-2 w-full mb-3 rounded"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+          <DepositCard
+            depositAmount={depositAmount}
+            setDepositAmount={setDepositAmount}
+            handleDeposit={handleDeposit}
           />
 
-          <div className="max-h-48 overflow-y-auto border rounded">
-            {filteredCoins.slice(0, 20).map((coin) => (
-              <div
-                key={coin.id}
-                onClick={() => setSelectedCoin(coin)}
-                className="p-2 flex justify-between hover:bg-gray-100 cursor-pointer"
-              >
-                <span>
-                  {coin.name} ({coin.symbol.toUpperCase()})
-                </span>
-                <span>${coin.current_price}</span>
-              </div>
-            ))}
-          </div>
+          <CoinSelector
+            search={search}
+            setSearch={setSearch}
+            filteredCoins={filteredCoins}
+            selectedCoin={selectedCoin}
+            setSelectedCoin={setSelectedCoin}
+          />
 
-          {selectedCoin && (
-            <p className="mt-3 text-center">
-              Selected: <b>{selectedCoin.name}</b>
-            </p>
-          )}
         </div>
 
-        {/* LIVE PRICE */}
-        <div className="bg-white p-6 rounded-xl shadow flex flex-col justify-center items-center text-center">
-          <h2 className="text-lg font-semibold mb-2">Live Price</h2>
+        {/* RIGHT COLUMN */}
+        <div>
 
-          {selectedCoin ? (
-            <>
-              <p className="text-2xl font-bold">
-                ${selectedCoin.current_price}
-              </p>
-              <p className="text-gray-500 text-sm mt-1">
-                ≈ ₦{(selectedCoin.current_price * 1600).toLocaleString()}
-              </p>
-            </>
-          ) : (
-            <p className="text-gray-400">Select a coin</p>
-          )}
+          <TradeCard
+            buyAmount={buyAmount}
+            setBuyAmount={setBuyAmount}
+            sellAmount={sellAmount}
+            setSellAmount={setSellAmount}
+            handleBuy={handleBuy}
+            handleSell={handleSell}
+            selectedCoin={selectedCoin}
+          />
+
         </div>
 
       </div>
 
-      {/* TRADING SECTION */}
-      <div className="grid md:grid-cols-2 gap-6 mt-6">
 
-        {/* BUY */}
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h2 className="text-lg font-semibold mb-4">Buy Crypto</h2>
+      {/* TRANSACTIONS */}
+      <div className="bg-white p-6 rounded-2xl shadow">
 
-          <input
-            type="number"
-            placeholder="Enter amount in NGN"
-            className="border p-2 w-full mb-3 rounded"
-            value={buyAmount}
-            onChange={(e) => setBuyAmount(e.target.value)}
-          />
+        {/* HEADER + BUTTON */}
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-semibold">Transactions</h3>
 
           <button
-            onClick={handleBuy}
-            className="bg-green-600 text-white w-full py-2 rounded hover:bg-green-700 transition cursor-pointer"
+            onClick={() => setShowTransactions(!showTransactions)}
+            className="text-sm px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300"
           >
-            Buy
+            {showTransactions ? "Hide History" : "View History"}
           </button>
         </div>
 
-        {/* SELL */}
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h2 className="text-lg font-semibold mb-4">Sell Crypto</h2>
-
-          <input
-            type="number"
-            placeholder="Enter crypto amount"
-            className="border p-2 w-full mb-3 rounded"
-            value={sellAmount}
-            onChange={(e) => setSellAmount(e.target.value)}
-          />
-
-          <button
-            onClick={handleSell}
-            className="bg-red-500 text-white w-full py-2 rounded hover:bg-red-600 transition cursor-pointer"
-          >
-            Sell
-          </button>
-        </div>
-
-        {/* TRANSACTION HISTORY */}
-        <div className="bg-white p-6 rounded-xl shadow mt-6">
-          <h2 className="text-lg font-semibold mb-4">Transaction History</h2>
-
-          {transactions.length === 0 ? (
-            <p className="text-gray-400 text-center">No transactions yet</p>
-          ) : (
-            <div className="space-y-3">
-              {transactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="flex justify-between items-center p-3 bg-gray-100 rounded"
-                >
-                  <div>
-                    <p className="font-semibold">
-                      {tx.type.toUpperCase()} {tx.coin.toUpperCase()}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(tx.created_at).toLocaleString()}
-                    </p>
-                  </div>
-
-                  <div className="text-right">
-                    <p>
-                      {tx.type === "buy" ? "+" : "-"}
-                      {tx.amount}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      ₦{Number(tx.ngn_value).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* CONDITIONAL RENDER */}
+        {showTransactions ? (
+          <Transactions transactions={transactions} />
+        ) : (
+          <p className="text-sm text-gray-500">
+            Transaction history is hidden. Click "View History" to display.
+          </p>
+        )}
 
       </div>
 
