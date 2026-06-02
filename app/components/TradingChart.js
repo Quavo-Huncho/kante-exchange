@@ -11,9 +11,11 @@ export default function TradingChart() {
     script.async = true;
 
     script.onload = () => {
+      const height = window.innerWidth < 640 ? 300 : 500;
+
       new window.TradingView.widget({
         width: "100%",
-        height: 500,
+        height,
         symbol: "BINANCE:BTCUSDT",
         interval: "30",
         timezone: "Etc/UTC",

@@ -52,11 +52,11 @@ export default function ExchangeCalculator({ close }) {
   return (
     <div
       onClick={() => close && close()}
-      className="fixed inset-0 bg-black/60 flex items-end md:items-center justify-center z-50"
+      className="fixed inset-0 bg-black/60 flex items-end md:items-center justify-center z-50 cursor-pointer"
     >
 
       <div onClick={(e) => e.stopPropagation()}
-      className="bg-white text-black p-6 rounded-t-2xl md:rounded-xl shadow-xl w-full md:w-[380px] max-h-[85vh] overflow-y-auto transform transition-all duration-500"
+      className="bg-white text-black p-6 rounded-t-2xl md:rounded-xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto transform transition-all duration-500 mx-4"
       >
         <h2 className="text-xl font-bold mb-4 text-center">
           Crypto Exchange
@@ -129,7 +129,7 @@ export default function ExchangeCalculator({ close }) {
 
         <button
           onClick={calculate}
-          className="bg-blue-900 text-white w-full py-2 rounded mt-4 cursor-pointer"
+          className="btn-primary w-full mt-4 disabled:opacity-60"
         >
           Calculate
         </button>
@@ -142,7 +142,7 @@ export default function ExchangeCalculator({ close }) {
 
         <button
           onClick={() => close && close()}
-          className="text-red-500 mt-4 w-full cursor-pointer"
+          className="btn-secondary mt-4 w-full"
         >
           Close
         </button>

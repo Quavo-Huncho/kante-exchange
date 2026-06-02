@@ -16,12 +16,12 @@ export default function CoinSelector({
         className="border p-2 w-full mb-3 rounded"
       />
 
-      <div className="max-h-40 overflow-y-auto border rounded">
+      <div className="max-h-40 sm:max-h-56 overflow-y-auto border rounded">
         {filteredCoins.slice(0, 10).map((coin) => (
           <div
             key={coin.id}
             onClick={() => setSelectedCoin(coin)}
-            className="cursor-pointer p-2 hover:bg-gray-100 flex justify-between"
+            className="cursor-pointer p-2 hover:bg-gray-100 flex justify-between items-center"
           >
             <span>
               {coin.name} ({coin.symbol.toUpperCase()})

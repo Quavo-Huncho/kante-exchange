@@ -54,7 +54,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
 
         {/* Logo */}
-        <h1 className="text-2xl font-bold cursor-pointer">
+        <h1 className="text-xl sm:text-2xl font-bold cursor-pointer">
           Kante<span className="text-blue-500">Exchange</span>
         </h1>
 
@@ -74,7 +74,7 @@ export default function Navbar() {
               <Link href="/login" className="px-4 py-2 border border-gray-700 rounded-lg">
                 Login
               </Link>
-              <Link href="/signup" className="px-5 py-2 bg-blue-600 rounded-lg">
+              <Link href="/signup" className="btn-primary">
                 Sign Up
               </Link>
             </>
@@ -148,7 +148,7 @@ export default function Navbar() {
                 <Link href="/login" className="flex-1 border py-2 rounded-lg text-center">
                   Login
                 </Link>
-                <Link href="/signup" className="flex-1 bg-blue-600 py-2 rounded-lg text-center">
+                <Link href="/signup" className="flex-1 btn-primary text-center">
                   Sign Up
                 </Link>
               </div>

@@ -23,17 +23,18 @@ export default function CryptoMarketTable() {
         Crypto Market
       </h2>
 
-      <div className="overflow-x-auto">
-        <div className="mb-6 flex justify-center">
+      <div className="mb-6 flex justify-center">
         <input
           type="text"
           placeholder="Search cryptocurrency..."
           className="w-full max-w-md p-3 rounded-lg bg-gray-900 border border-gray-700 text-white"
           onChange={(e) => setSearch(e.target.value.toLowerCase())}
         />
-        </div>
-        <table className="w-full text-left border-collapse">
+      </div>
 
+      {/* Desktop table */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-left border-collapse">
           <thead className="border-b border-gray-700 text-gray-400">
             <tr>
               <th className="py-4">Coin</th>
@@ -121,6 +122,40 @@ export default function CryptoMarketTable() {
           </tbody>
 
         </table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden grid gap-4">
+        {coins
+          .filter(
+            (coin) =>
+              coin.name.toLowerCase().includes(search) ||
+              coin.symbol.toLowerCase().includes(search)
+          )
+          .map((coin) => (
+            <div key={coin.id} className="bg-gray-900 text-white p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Image src={coin.image} alt={coin.name} width={28} height={28} />
+                  <div>
+                    <div className="font-semibold">{coin.symbol.toUpperCase()}</div>
+                    <div className="text-gray-400 text-sm">{coin.name}</div>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div>${coin.current_price?.toLocaleString()}</div>
+                  <div className={coin.price_change_percentage_24h >= 0 ? "text-green-400 text-sm" : "text-red-400 text-sm"}>
+                    {coin.price_change_percentage_24h?.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 text-sm text-gray-400">
+                Market Cap: ${coin.market_cap?.toLocaleString()}
+              </div>
+            </div>
+        ))}
       </div>
     </div>
   );

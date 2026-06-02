@@ -19,7 +19,7 @@ import { SiTether } from "react-icons/si";
 export default function HowItWorks() {
   return (
     <section className="py-20 bg-blue-50" id="contact">
-      <div className="container mx-auto text-center">
+      <div className="container mx-auto text-center px-4 sm:px-6">
         <h2 className="text-4xl font-bold text-blue-900 mb-12">Contact Us</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

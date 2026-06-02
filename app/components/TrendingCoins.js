@@ -18,7 +18,7 @@ export default function TrendingCoins() {
         🔥 Trending Coins
       </h2>
 
-      <div className="grid md:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 sm:gap-6">
 
         {trending.map((coin) => (
           <div

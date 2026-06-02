@@ -26,7 +26,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col md:flex-row">
 
       {/* LEFT SIDE (Branding) */}
       <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-blue-900 to-black text-white p-10">
@@ -39,9 +39,9 @@ export default function SignupPage() {
       </div>
 
       {/* RIGHT SIDE (Form) */}
-      <div className="flex items-center justify-center w-full md:w-1/2 bg-gray-100">
-        
-        <div className="bg-white w-[380px] p-8 rounded-2xl shadow-lg">
+      <div className="flex items-center justify-center w-full md:w-1/2 bg-gray-100 py-8">
+
+        <div className="bg-white w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-lg mx-4">
 
           {/* Title */}
           <h2 className="text-2xl font-semibold mb-2">
@@ -92,7 +92,7 @@ export default function SignupPage() {
           <button
             onClick={handleSignup}
             disabled={loading}
-            className="w-full bg-blue-900 text-white py-3 rounded-lg hover:bg-black transition font-medium disabled:bg-gray-400"
+            className="btn-primary w-full disabled:opacity-60"
           >
             {loading ? "Creating Account..." : "Create Account"}
           </button>

@@ -10,7 +10,7 @@ export default function Transactions({ transactions }) {
           {transactions.map((tx) => (
             <div
               key={tx.id}
-              className="flex justify-between border-b pb-2"
+              className="flex flex-col sm:flex-row sm:justify-between border-b pb-2"
             >
               <div>
                 <p className="font-semibold">
@@ -21,7 +21,7 @@ export default function Transactions({ transactions }) {
                 </p>
               </div>
 
-              <div className="text-right">
+              <div className="text-right mt-2 sm:mt-0">
                 <p>
                   {tx.type === "buy" ? "+" : "-"}
                   {tx.amount}

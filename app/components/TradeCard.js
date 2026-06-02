@@ -8,7 +8,7 @@ export default function TradeCard({
   selectedCoin,
 }) {
   return (
-    <div className="grid md:grid-cols-2 gap-6 mb-6">
+    <div className="grid gap-6 mb-6 md:grid-cols-2">
 
       {/* BUY */}
       <div className="bg-white p-4 rounded">

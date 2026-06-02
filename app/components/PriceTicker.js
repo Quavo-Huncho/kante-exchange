@@ -26,7 +26,7 @@ export default function PriceTicker() {
   return (
   <div className="bg-gray-900 text-white py-2 overflow-hidden relative">
     <div className="ticker-wrapper">
-      <div className="ticker-track flex gap-10 px-6">
+      <div className="ticker-track flex gap-6 px-4 sm:gap-10 sm:px-6">
 
         {[...coins, ...coins].map((coin, index) => (
           <div key={coin.id + "-" + index} className="flex items-center gap-3">

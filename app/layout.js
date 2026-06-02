@@ -21,10 +21,13 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className="bg-gray-50 font-sans">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
+      <body className={`${geistSans.variable} ${geistMono.variable} bg-gray-50 font-sans`}>
         <Navbar />
 
-        <main>{children}</main>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6">{children}</main>
 
         <Footer />
       </body>

@@ -5,8 +5,6 @@ import { getUser, logout } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-// components
-import PortfolioCard from "../components/PortfolioCard";
 import DepositCard from "../components/DepositCard";
 import CoinSelector from "../components/CoinSelector";
 import TradeCard from "../components/TradeCard";
@@ -27,7 +25,6 @@ export default function Dashboard() {
   const [showTransactions, setShowTransactions] = useState(false);
   const RATE = 1600;
 
-  // ================= INIT =================
   useEffect(() => {
     async function init() {
       const currentUser = await getUser();
@@ -65,7 +62,6 @@ export default function Dashboard() {
     init();
   }, [router]);
 
-  // ================= COINS =================
   useEffect(() => {
     async function fetchCoins() {
       const res = await fetch(
@@ -74,6 +70,7 @@ export default function Dashboard() {
       const data = await res.json();
       setCoins(data);
     }
+
     fetchCoins();
   }, []);
 
@@ -81,30 +78,31 @@ export default function Dashboard() {
     coin.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  // ================= PORTFOLIO =================
   const portfolioValue = useMemo(() => {
     if (!wallet?.balance || coins.length === 0) return 0;
 
     let total = 0;
 
     Object.entries(wallet.balance).forEach(([coin, amount]) => {
-      if (coin === "ngn") total += Number(amount);
-      else {
-        const coinData = coins.find(
-          (c) => c.symbol.toLowerCase() === coin
-        );
-        if (coinData) {
-          total += Number(amount) * coinData.current_price * RATE;
-        }
+      if (coin === "ngn") {
+        total += Number(amount);
+        return;
+      }
+
+      const coinData = coins.find(
+        (c) => c.symbol.toLowerCase() === coin
+      );
+
+      if (coinData) {
+        total += Number(amount) * coinData.current_price * RATE;
       }
     });
 
     return total;
   }, [wallet, coins, RATE]);
 
-  // ================= DEPOSIT =================
   async function handleDeposit() {
-    if (!depositAmount || !wallet) return;
+    if (!depositAmount || !wallet || !user) return;
 
     const amount = Number(depositAmount);
 
@@ -139,19 +137,18 @@ export default function Dashboard() {
     setDepositAmount("");
   }
 
-  // ================= BUY =================
   async function handleBuy() {
-    if (!selectedCoin || !buyAmount || !wallet) return;
+    if (!selectedCoin || !buyAmount || !wallet || !user) return;
 
     const ngnAmount = Number(buyAmount);
     const coinKey = selectedCoin.symbol.toLowerCase();
     const price = selectedCoin.current_price;
-
     const cryptoAmount = ngnAmount / (price * RATE);
     const currentBalance = wallet.balance || {};
 
     if ((currentBalance.ngn || 0) < ngnAmount) {
-      return alert("Insufficient NGN");
+      alert("Insufficient NGN");
+      return;
     }
 
     const updatedBalance = {
@@ -186,19 +183,18 @@ export default function Dashboard() {
     setBuyAmount("");
   }
 
-  // ================= SELL =================
   async function handleSell() {
-    if (!selectedCoin || !sellAmount || !wallet) return;
+    if (!selectedCoin || !sellAmount || !wallet || !user) return;
 
     const cryptoAmount = Number(sellAmount);
     const coinKey = selectedCoin.symbol.toLowerCase();
     const price = selectedCoin.current_price;
-
     const currentBalance = wallet.balance || {};
     const available = currentBalance[coinKey] || 0;
 
     if (available < cryptoAmount) {
-      return alert("Insufficient balance");
+      alert("Insufficient balance");
+      return;
     }
 
     const ngnValue = cryptoAmount * price * RATE;
@@ -240,96 +236,86 @@ export default function Dashboard() {
     router.push("/login");
   }
 
-  if (!user) return <div className="p-10">Loading...</div>;
+  if (!user) return <div className="p-6 sm:p-10">Loading...</div>;
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
+    <div className="px-4 py-5 sm:px-6 sm:py-6 bg-gray-100 min-h-screen">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">
+              Dashboard
+            </p>
+            <h1 className="mt-1 text-2xl font-bold text-gray-900 sm:text-3xl">
+              Welcome back
+            </h1>
+            <p className="mt-1 text-sm text-gray-500 break-all">
+              {user.email}
+            </p>
+          </div>
 
-      {/* TOP HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-gray-500 text-sm">
-            Welcome back, {user?.email}
+          <button
+            onClick={handleLogout}
+            className="w-full rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600 sm:w-auto"
+          >
+            Logout
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-2 rounded-2xl bg-black px-4 py-3 text-sm text-white sm:flex-row sm:items-center sm:justify-between">
+          <span>📊 Live Market: Active</span>
+          <span className="text-green-400">● Connected</span>
+        </div>
+
+        <section className="rounded-[28px] bg-gradient-to-r from-blue-900 to-black px-5 py-6 text-white shadow-lg sm:px-6">
+          <p className="text-sm text-gray-200">Total Portfolio Value</p>
+          <h2 className="mt-3 text-3xl font-bold sm:text-4xl">
+            <span className="break-words">₦{portfolioValue.toLocaleString()}</span>
+          </h2>
+          <p className="mt-2 text-xs text-gray-300 sm:text-sm">
+            Real-time valuation based on market prices
           </p>
+        </section>
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="rounded-2xl bg-white p-4 shadow-sm sm:p-5">
+            <p className="text-sm text-gray-500">NGN Balance</p>
+            <h3 className="mt-2 text-xl font-bold text-gray-900">
+              <span className="break-words">₦{wallet?.balance?.ngn?.toLocaleString() || 0}</span>
+            </h3>
+          </div>
+
+          <div className="rounded-2xl bg-white p-4 shadow-sm sm:p-5">
+            <p className="text-sm text-gray-500">Assets Held</p>
+            <h3 className="mt-2 text-xl font-bold text-gray-900">
+              {Object.keys(wallet?.balance || {}).length - 1 || 0}
+            </h3>
+          </div>
+
+          <div className="rounded-2xl bg-white p-4 shadow-sm sm:p-5 sm:col-span-2 xl:col-span-1">
+            <p className="text-sm text-gray-500">Transactions</p>
+            <h3 className="mt-2 text-xl font-bold text-gray-900">
+              {transactions.length}
+            </h3>
+          </div>
         </div>
 
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded-lg mt-3 md:mt-0"
-        >
-          Logout
-        </button>
-      </div>
+        <div className="grid gap-5 xl:grid-cols-2">
+          <div className="space-y-5">
+            <DepositCard
+              depositAmount={depositAmount}
+              setDepositAmount={setDepositAmount}
+              handleDeposit={handleDeposit}
+            />
 
-      {/* MARKET STATUS STRIP */}
-      <div className="bg-black text-white p-3 rounded-xl mb-6 flex items-center justify-between text-sm">
-        <span>📊 Live Market: Active</span>
-        <span className="text-green-400">● Connected</span>
-      </div>
-
-      {/* PORTFOLIO HERO CARD */}
-      <div className="bg-gradient-to-r from-blue-900 to-black text-white p-6 rounded-2xl shadow mb-6">
-        <p className="text-sm text-gray-300">Total Portfolio Value</p>
-        <h2 className="text-3xl font-bold mt-2">
-          ₦{portfolioValue.toLocaleString()}
-        </h2>
-
-        <p className="text-xs text-gray-400 mt-2">
-          Real-time valuation based on market prices
-        </p>
-      </div>
-
-      {/* QUICK STATS */}
-      <div className="grid md:grid-cols-3 gap-4 mb-6">
-
-        <div className="bg-white p-5 rounded-xl shadow">
-          <p className="text-gray-500 text-sm">NGN Balance</p>
-          <h3 className="text-xl font-bold">
-            ₦{wallet?.balance?.ngn?.toLocaleString() || 0}
-          </h3>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl shadow">
-          <p className="text-gray-500 text-sm">Assets Held</p>
-          <h3 className="text-xl font-bold">
-            {Object.keys(wallet?.balance || {}).length - 1 || 0}
-          </h3>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl shadow">
-          <p className="text-gray-500 text-sm">Transactions</p>
-          <h3 className="text-xl font-bold">
-            {transactions.length}
-          </h3>
-        </div>
-
-      </div>
-
-      {/* MAIN GRID */}
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
-
-        {/* LEFT COLUMN */}
-        <div className="space-y-6">
-
-          <DepositCard
-            depositAmount={depositAmount}
-            setDepositAmount={setDepositAmount}
-            handleDeposit={handleDeposit}
-          />
-
-          <CoinSelector
-            search={search}
-            setSearch={setSearch}
-            filteredCoins={filteredCoins}
-            selectedCoin={selectedCoin}
-            setSelectedCoin={setSelectedCoin}
-          />
-
-        </div>
-
-        {/* RIGHT COLUMN */}
-        <div>
+            <CoinSelector
+              search={search}
+              setSearch={setSearch}
+              filteredCoins={filteredCoins}
+              selectedCoin={selectedCoin}
+              setSelectedCoin={setSelectedCoin}
+            />
+          </div>
 
           <TradeCard
             buyAmount={buyAmount}
@@ -340,38 +326,36 @@ export default function Dashboard() {
             handleSell={handleSell}
             selectedCoin={selectedCoin}
           />
-
         </div>
 
+        <section className="rounded-2xl bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Transactions</h3>
+              <p className="text-sm text-gray-500">
+                Your most recent activity is shown below.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowTransactions(!showTransactions)}
+              className="w-full rounded-xl bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 sm:w-auto"
+            >
+              {showTransactions ? "Hide History" : "View History"}
+            </button>
+          </div>
+
+          <div className="mt-4">
+            {showTransactions ? (
+              <Transactions transactions={transactions} />
+            ) : (
+              <p className="rounded-xl bg-gray-50 px-4 py-4 text-sm text-gray-500">
+                Transaction history is hidden. Tap “View History” to see it.
+              </p>
+            )}
+          </div>
+        </section>
       </div>
-
-
-      {/* TRANSACTIONS */}
-      <div className="bg-white p-6 rounded-2xl shadow">
-
-        {/* HEADER + BUTTON */}
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-semibold">Transactions</h3>
-
-          <button
-            onClick={() => setShowTransactions(!showTransactions)}
-            className="text-sm px-3 py-1 bg-gray-200 rounded-lg hover:bg-gray-300"
-          >
-            {showTransactions ? "Hide History" : "View History"}
-          </button>
-        </div>
-
-        {/* CONDITIONAL RENDER */}
-        {showTransactions ? (
-          <Transactions transactions={transactions} />
-        ) : (
-          <p className="text-sm text-gray-500">
-            Transaction history is hidden. Click "View History" to display.
-          </p>
-        )}
-
-      </div>
-
     </div>
   );
 }
