@@ -1,6 +1,7 @@
 "use client";
 
 import { FaTwitter, FaTelegram, FaInstagram, FaGithub } from "react-icons/fa";
+import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -27,10 +28,10 @@ export default function Footer() {
           </h3>
 
           <ul className="space-y-2 text-sm">
-            <li className="hover:text-white cursor-pointer">Home</li>
-            <li className="hover:text-white cursor-pointer">Markets</li>
-            <li className="hover:text-white cursor-pointer">Exchange</li>
-            <li className="hover:text-white cursor-pointer">Calculator</li>
+            <li className="hover:text-white cursor-pointer"><Link href = "/">Home</Link></li>
+            <li className="hover:text-white cursor-pointer"><Link href="/markets">Markets</Link></li>
+            <li className="hover:text-white cursor-pointer"><Link href="/exchange">Exchange</Link></li>
+            <li className="hover:text-white cursor-pointer"><Link href="/calculator">Calculator</Link></li>
           </ul>
         </div>
 

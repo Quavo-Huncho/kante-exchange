@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SiTether } from "react-icons/si";
 import ExchangeCalculator from "./ExchangeCalculator";
+import Link from "next/link";
 
 import {
   UserPlusIcon,
@@ -53,9 +54,9 @@ export default function HeroSection(){
       Open Exchange Calculator
     </button>
 
-    <button className="btn-secondary w-full sm:w-auto font-semibold">
+    <Link href="/login" className="btn-secondary w-full sm:w-auto font-semibold">
       Start Trading
-    </button>
+    </Link>
 
   </div>
 
