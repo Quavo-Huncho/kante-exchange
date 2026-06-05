@@ -27,7 +27,9 @@ export default function RootLayout({ children }) {
       <body className={`${geistSans.variable} ${geistMono.variable} bg-gray-50 font-sans`}>
         <Navbar />
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6">{children}</main>
+        <main className="w-full min-h-screen">
+          {children}
+        </main>
 
         <Footer />
       </body>

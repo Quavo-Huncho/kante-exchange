@@ -85,7 +85,7 @@ export default function Home() {
   }
 
   return (
-    <main className="px-4 sm:px-6">
+    <>
 
       <HeroSection />
       <div className="max-w-full overflow-x-auto bg-gray-100 py-2">
@@ -99,6 +99,6 @@ export default function Home() {
       <HowItWorks />
       <ContactSection />
       
-    </main>
+    </>
   );
 }
